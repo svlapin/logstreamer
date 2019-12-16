@@ -9,9 +9,14 @@ import (
 )
 
 const readBufSize = 1024
-const fileName = "./1.txt"
 
 func main() {
+	if len(os.Args) < 2 {
+		log.Fatalf("file name is required")
+	}
+
+	fileName := os.Args[1]
+
 	f, err := os.Open(fileName)
 	if err != nil {
 		log.Fatalf("%v", fmt.Errorf("open: %w", err))
