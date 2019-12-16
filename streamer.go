@@ -2,19 +2,24 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
+	"time"
 )
 
 const readBufSize = 1024
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 3 {
 		log.Fatalf("file name is required")
 	}
 
+	client := newSlackClient(os.Args[2])
 	fileName := os.Args[1]
 
 	f, err := os.Open(fileName)
@@ -42,11 +47,39 @@ func main() {
 				log.Fatalf("%v", fmt.Errorf("read: %w", err))
 			}
 		}
-		handle(append(acc, readBuf...))
+		client.postMessage(string(append(acc, readBuf...)))
 		acc = acc[:0]
 	}
 }
 
-func handle(acc []byte) {
-	fmt.Print(string(acc))
+type slackMsg struct {
+	Text string `json:"text"`
+}
+
+type slackClient struct {
+	url    string
+	client http.Client
+}
+
+func newSlackClient(url string) *slackClient {
+	return &slackClient{
+		url:    url,
+		client: http.Client{Timeout: time.Second * 10},
+	}
+}
+
+func (sc *slackClient) postMessage(msg string) (err error) {
+	body, err := json.Marshal(slackMsg{Text: msg})
+	if err != nil {
+		return fmt.Errorf("postMessage: marshal: %w", err)
+	}
+	req, err := http.NewRequest("POST", sc.url, bytes.NewBuffer(body))
+	if err != nil {
+		return fmt.Errorf("postMessage: newRequest: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	_, err = sc.client.Do(req)
+
+	return err
 }
