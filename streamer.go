@@ -22,15 +22,21 @@ func main() {
 	client := newSlackClient(os.Args[2])
 	fileName := os.Args[1]
 
-	f, err := os.Open(fileName)
-	if err != nil {
-		log.Fatalf("%v", fmt.Errorf("open: %w", err))
-	}
-	defer f.Close()
+	var f *os.File
 
-	_, err = f.Seek(0, 2)
-	if err != nil {
-		log.Fatalf("%v", fmt.Errorf("seek: %w", err))
+	if fileName == "-" {
+		f = os.Stdin
+	} else {
+		var err error
+		f, err = os.Open(fileName)
+		if err != nil {
+			log.Fatalf("%v", fmt.Errorf("open: %w", err))
+		}
+		defer f.Close()
+		_, err = f.Seek(0, 2)
+		if err != nil {
+			log.Fatalf("%v", fmt.Errorf("seek: %w", err))
+		}
 	}
 
 	br := bufio.NewReader(f)
